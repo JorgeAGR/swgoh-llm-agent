@@ -1,0 +1,10 @@
+langgraph
+langchain-google-genai
+langchain-chroma
+langchain-community
+pandas
+pyarrow
+cloudscraper
+beautifulsoup4
+parquet
+python-dotenv
