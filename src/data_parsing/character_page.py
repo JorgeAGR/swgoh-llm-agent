@@ -120,7 +120,7 @@ if __name__ == "__main__":
     #     print(f"Abilities: {data['abilities']}")
 
     data_path = os.path.join(os.path.dirname(__file__), "../../data")
-    df_all = pd.read_parquet(os.path.join(data_path, "swgoh_units_2024.parquet"))
+    df_all = pd.read_parquet(os.path.join(data_path, "swgoh_units.parquet"))
 
     character_details = []
     for idx, row in tqdm.tqdm(df_all.iterrows(), total=df_all.shape[0], desc="Parsing characters",
