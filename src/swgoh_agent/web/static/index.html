@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SWGOH Tactical Droid</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #667085;
+    --border: #e3e6eb; --accent: #2f6fdf; --accent-text: #ffffff;
+    --user: #e8effc; --code: #f1f3f6; --tool: #f8f9fb; --danger: #c43d3d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --panel: #161a20; --text: #e6e9ee; --muted: #8b95a5;
+      --border: #262c35; --accent: #5b8ff0; --accent-text: #0b0e12;
+      --user: #1d2940; --code: #1d222a; --tool: #13171c; --danger: #ef6b6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    border-bottom: 1px solid var(--border); background: var(--panel);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .meta { color: var(--muted); font-size: 12.5px; flex: 1; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  main { flex: 1; overflow-y: auto; }
+  #messages { max-width: 820px; margin: 0 auto; padding: 24px 16px 8px; }
+  .msg { margin-bottom: 20px; }
+  .msg.user .bubble {
+    background: var(--user); padding: 10px 14px; border-radius: 12px;
+    margin-left: auto; max-width: 85%; width: fit-content; white-space: pre-wrap;
+  }
+  .msg.assistant .body > :first-child { margin-top: 0; }
+  .msg.assistant .body > :last-child { margin-bottom: 0; }
+  .body table { border-collapse: collapse; margin: 8px 0; display: block; overflow-x: auto; }
+  .body th, .body td { border: 1px solid var(--border); padding: 5px 9px; text-align: left; }
+  .body code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  .body pre { background: var(--code); padding: 10px; border-radius: 8px; overflow-x: auto; }
+  .body pre code { padding: 0; background: none; }
+  .body a { color: var(--accent); }
+  .body h1, .body h2, .body h3 { font-size: 1.05em; margin: 1em 0 .4em; }
+  .error { color: var(--danger); }
+  details.tools {
+    border: 1px solid var(--border); background: var(--tool); border-radius: 8px;
+    margin-bottom: 10px; font-size: 13px;
+  }
+  details.tools > summary { cursor: pointer; padding: 6px 10px; color: var(--muted); }
+  .tool { border-top: 1px solid var(--border); padding: 6px 10px; }
+  .tool .sig { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-word; }
+  .tool .status { color: var(--muted); margin-left: 6px; }
+  .tool pre {
+    white-space: pre-wrap; max-height: 260px; overflow: auto; margin: 6px 0 0;
+    font-size: 12px; color: var(--muted);
+  }
+  .tool details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  .cursor::after { content: "▍"; animation: blink 1s steps(1) infinite; color: var(--muted); }
+  @keyframes blink { 50% { opacity: 0; } }
+  #empty { text-align: center; color: var(--muted); padding-top: 12vh; }
+  #empty h2 { color: var(--text); font-weight: 600; margin-bottom: 6px; }
+  .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
+  .suggestions button { font-size: 13.5px; border-radius: 16px; }
+  footer { border-top: 1px solid var(--border); background: var(--panel); padding: 12px 16px; }
+  form { max-width: 820px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
+  textarea {
+    flex: 1; resize: none; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px;
+    max-height: 200px; outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+  @media (max-width: 560px) { header .meta { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>SWGOH Tactical Droid</h1>
+  <span class="meta" id="meta"></span>
+  <button id="new-chat" type="button">New chat</button>
+</header>
+<main id="scroller">
+  <div id="messages">
+    <div id="empty">
+      <h2>What can I analyse for you?</h2>
+      <div>Kits, teams, counters, Zetas and Omicrons, all grounded in swgoh.gg data.</div>
+      <div class="suggestions">
+        <button type="button">Build the best team around Jedi Master Mace Windu</button>
+        <button type="button">Which Bounty Hunters have Payouts, and what do they do?</button>
+        <button type="button">What does SLKR's Ultimate do?</button>
+        <button type="button">Which characters can dispel Stealth and Taunt?</button>
+        <button type="button">Which Omicrons are for Territory Wars?</button>
+      </div>
+    </div>
+  </div>
+</main>
+<footer>
+  <form id="form">
+    <textarea id="input" rows="1" placeholder="Ask about a character, team or mechanic…" autofocus></textarea>
+    <button id="send" class="primary" type="submit">Send</button>
+  </form>
+</footer>
+<script>
+const $ = (id) => document.getElementById(id);
+const messagesEl = $("messages"), scroller = $("scroller"), input = $("input"), sendBtn = $("send");
+let threadId = newThreadId();
+let controller = null;
+
+function newThreadId() {
+  return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())).slice(0, 36);
+}
+
+function renderMarkdown(text) {
+  if (window.marked && window.DOMPurify) return DOMPurify.sanitize(marked.parse(text));
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML.replace(/\n/g, "<br>");
+}
+
+function nearBottom() {
+  return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 120;
+}
+function scrollDown(force) {
+  if (force || nearBottom()) scroller.scrollTop = scroller.scrollHeight;
+}
+
+function addUserMessage(text) {
+  $("empty")?.remove();
+  const el = document.createElement("div");
+  el.className = "msg user";
+  el.innerHTML = '<div class="bubble"></div>';
+  el.querySelector(".bubble").textContent = text;
+  messagesEl.appendChild(el);
+}
+
+function addAssistantMessage() {
+  const el = document.createElement("div");
+  el.className = "msg assistant";
+  el.innerHTML = '<details class="tools" hidden><summary></summary></details><div class="body cursor"></div>';
+  messagesEl.appendChild(el);
+  return {
+    el, text: "", tools: new Map(),
+    body: el.querySelector(".body"), toolBox: el.querySelector(".tools"),
+  };
+}
+
+function formatArgs(args) {
+  return Object.entries(args || {})
+    .map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(", ");
+}
+
+function updateToolSummary(msg) {
+  const total = msg.tools.size;
+  const pending = [...msg.tools.values()].filter((t) => !t.done).length;
+  msg.toolBox.hidden = false;
+  msg.toolBox.querySelector("summary").textContent = pending
+    ? `Consulting the archives… (${total - pending}/${total} lookups)`
+    : `${total} lookup${total === 1 ? "" : "s"}`;
+}
+
+function handleEvent(msg, event) {
+  if (event.type === "token") {
+    msg.text += event.text;
+    scheduleRender(msg);
+  } else if (event.type === "tool_call") {
+    const row = document.createElement("div");
+    row.className = "tool";
+    row.innerHTML = '<span class="sig"></span><span class="status">running…</span>';
+    row.querySelector(".sig").textContent = `${event.name}(${formatArgs(event.args)})`;
+    msg.toolBox.appendChild(row);
+    msg.tools.set(event.id, { row, done: false });
+    // Text before a tool call is interim narration; keep only the final answer.
+    msg.text = "";
+    scheduleRender(msg);
+    updateToolSummary(msg);
+  } else if (event.type === "tool_result") {
+    const tool = msg.tools.get(event.id);
+    if (!tool) return;
+    tool.done = true;
+    tool.row.querySelector(".status").textContent = "";
+    const d = document.createElement("details");
+    d.innerHTML = "<summary>result</summary><pre></pre>";
+    d.querySelector("pre").textContent = event.content;
+    tool.row.appendChild(d);
+    updateToolSummary(msg);
+  } else if (event.type === "error") {
+    const err = document.createElement("div");
+    err.className = "error";
+    err.textContent = `Error: ${event.message}`;
+    msg.el.appendChild(err);
+  }
+}
+
+let renderPending = false;
+function scheduleRender(msg) {
+  if (renderPending) return;
+  renderPending = true;
+  requestAnimationFrame(() => {
+    renderPending = false;
+    const stick = nearBottom();
+    msg.body.innerHTML = renderMarkdown(msg.text);
+    msg.body.querySelectorAll("a").forEach((a) => { a.target = "_blank"; a.rel = "noopener"; });
+    if (stick) scrollDown(true);
+  });
+}
+
+function setBusy(busy) {
+  input.disabled = busy;
+  sendBtn.textContent = busy ? "Stop" : "Send";
+  sendBtn.classList.toggle("primary", !busy);
+}
+
+async function send(text) {
+  text = text.trim();
+  if (!text || controller) return;
+  addUserMessage(text);
+  const msg = addAssistantMessage();
+  scrollDown(true);
+  input.value = "";
+  autosize();
+  controller = new AbortController();
+  setBusy(true);
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, thread_id: threadId }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sep;
+      while ((sep = buffer.indexOf("\n\n")) !== -1) {
+        const frame = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+        if (frame.startsWith("data: ")) handleEvent(msg, JSON.parse(frame.slice(6)));
+      }
+    }
+  } catch (err) {
+    if (err.name !== "AbortError") handleEvent(msg, { type: "error", message: err.message });
+  } finally {
+    msg.body.classList.remove("cursor");
+    if (!msg.text && !msg.el.querySelector(".error")) msg.body.innerHTML = "<em>(stopped)</em>";
+    controller = null;
+    setBusy(false);
+    input.focus();
+  }
+}
+
+function autosize() {
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 200) + "px";
+}
+
+$("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (controller) controller.abort();
+  else send(input.value);
+});
+input.addEventListener("input", autosize);
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    $("form").requestSubmit();
+  }
+});
+document.querySelectorAll(".suggestions button").forEach((b) =>
+  b.addEventListener("click", () => send(b.textContent)));
+$("new-chat").addEventListener("click", () => {
+  if (controller) controller.abort();
+  location.reload();  // a fresh page gets a fresh thread id
+});
+
+fetch("/api/info").then((r) => r.json()).then((info) => {
+  $("meta").textContent =
+    `${info.model} · ${info.units} units · data from ${info.fetched_at.slice(0, 10)}`;
+}).catch(() => {});
+</script>
+</body>
+</html>
